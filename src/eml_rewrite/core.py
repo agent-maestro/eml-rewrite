@@ -42,10 +42,12 @@ __all__ = [
     "Suggestion",
     "DomainRequirement",
     "NO_REQUIREMENT",
+    "Counterexample",
     "best",
     "suggest",
     "score",
     "verify_equivalence",
+    "find_counterexample",
 ]
 
 
@@ -524,6 +526,144 @@ def verify_equivalence(
             return False
 
     return True
+
+
+# ---------------------------------------------------------------------------
+# Counterexample finder
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Counterexample:
+    """A specific point at which two expressions disagree.
+
+    Attributes
+    ----------
+    symbols:
+        Tuple of free symbols in the order matching ``point``.
+    point:
+        Numeric values substituted into ``symbols`` at the disagreement.
+    before_value:
+        Result of evaluating the *before* expression at ``point``. May
+        be ``None`` if the expression is not defined there.
+    after_value:
+        Same, for the *after* expression.
+    kind:
+        One of ``"value_disagreement"`` (both sides defined, values
+        differ) or ``"domain_mismatch"`` (one side raises while the
+        other is finite — the rewrite changes the domain of definition).
+    note:
+        Human-readable one-line summary suitable for editor surfacing.
+    """
+
+    symbols: tuple[sp.Symbol, ...]
+    point: tuple[float, ...]
+    before_value: complex | None
+    after_value: complex | None
+    kind: str
+    note: str
+
+
+def find_counterexample(
+    before: sp.Basic,
+    after: sp.Basic,
+    *,
+    samples_per_region: int = _SAMPLES_PER_REGION,
+    rtol: float = _VERIFY_RTOL,
+    atol: float = _VERIFY_ATOL,
+    precision: int = _VERIFY_PRECISION,
+    seed: int | None = None,
+) -> Counterexample | None:
+    """Return the first sampled point at which ``before`` and ``after``
+    disagree, or ``None`` if no disagreement is found in the same
+    sweep used by :func:`verify_equivalence`.
+
+    Use this when ``verify_equivalence`` returns ``False`` and you
+    want to know *why*: the returned :class:`Counterexample` carries
+    the specific symbol values, both side's results, and a one-line
+    note explaining the divergence.
+
+    Useful for editor tools: when a proposed rewrite is rejected, you
+    can show the user the specific input where it fails, instead of
+    a generic "unsound" message.
+    """
+    # If simplify proves equivalence, we're done — there is no
+    # counterexample, by construction.
+    try:
+        if sp.simplify(before - after) == 0:
+            return None
+    except (TypeError, ValueError, RecursionError):
+        pass
+
+    rng = random.Random(seed)
+    syms = _free_symbols(before) or _free_symbols(after)
+    if not syms:
+        # Constant case: evaluate both and compare directly.
+        try:
+            cb = complex(sp.N(before, precision))
+            ca = complex(sp.N(after, precision))
+        except (TypeError, ValueError):
+            return None
+        if _approx_equal(cb, ca, rtol, atol):
+            return None
+        return Counterexample(
+            symbols=(), point=(),
+            before_value=cb, after_value=ca,
+            kind="value_disagreement",
+            note=f"constant disagreement: {cb} vs {ca}",
+        )
+
+    region_lists = [_regions_for_symbol(s) for s in syms]
+    default_value = 1.5
+
+    points: list[tuple[float, ...]] = []
+    for i, regions in enumerate(region_lists):
+        for low, high in regions:
+            for _ in range(samples_per_region):
+                pt = [default_value] * len(syms)
+                pt[i] = rng.uniform(low, high)
+                points.append(tuple(pt))
+
+    for point in points:
+        v_before, err_before = _eval_high_precision(before, syms, point, precision)
+        v_after,  err_after  = _eval_high_precision(after,  syms, point, precision)
+
+        if v_before is None and v_after is None:
+            continue
+        if err_before is OverflowError or err_after is OverflowError:
+            continue
+
+        if err_before is ValueError and v_after is not None:
+            sym_str = ", ".join(f"{s}={p!r}" for s, p in zip(syms, point))
+            return Counterexample(
+                symbols=tuple(syms), point=point,
+                before_value=None, after_value=v_after,
+                kind="domain_mismatch",
+                note=f"original undefined at ({sym_str}); "
+                     f"rewrite gives {v_after} — rewrite enlarges the domain",
+            )
+        if err_after is ValueError and v_before is not None:
+            sym_str = ", ".join(f"{s}={p!r}" for s, p in zip(syms, point))
+            return Counterexample(
+                symbols=tuple(syms), point=point,
+                before_value=v_before, after_value=None,
+                kind="domain_mismatch",
+                note=f"rewrite undefined at ({sym_str}); "
+                     f"original gives {v_before} — rewrite shrinks the domain",
+            )
+
+        if v_before is not None and v_after is not None:
+            if not _approx_equal(v_before, v_after, rtol, atol):
+                sym_str = ", ".join(f"{s}={p!r}" for s, p in zip(syms, point))
+                return Counterexample(
+                    symbols=tuple(syms), point=point,
+                    before_value=v_before, after_value=v_after,
+                    kind="value_disagreement",
+                    note=f"at ({sym_str}): original={v_before}, "
+                         f"rewrite={v_after}",
+                )
+
+    return None
 
 
 # ---------------------------------------------------------------------------

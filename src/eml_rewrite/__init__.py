@@ -21,16 +21,18 @@ Command-line:
 from __future__ import annotations
 
 from .core import (
+    Counterexample,
     DomainRequirement,
     NO_REQUIREMENT,
     Suggestion,
     best,
+    find_counterexample,
     score,
     suggest,
     verify_equivalence,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "__version__",
@@ -40,5 +42,7 @@ __all__ = [
     "Suggestion",
     "DomainRequirement",
     "NO_REQUIREMENT",
+    "Counterexample",
     "verify_equivalence",
+    "find_counterexample",
 ]

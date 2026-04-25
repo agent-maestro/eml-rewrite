@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project will adhere to [Semantic Versioning](https://semver.org/) once
 the public 1.0.0 release ships.
 
+## [0.1.1] — 2026-04-25 — Counterexample finder
+
+### Added
+- `find_counterexample(before, after) -> Counterexample | None`:
+  when `verify_equivalence` rejects a rewrite, this returns the
+  specific point at which the two sides diverge, both side's
+  values, the kind of disagreement (`value_disagreement` or
+  `domain_mismatch`), and a one-line note suitable for editor
+  surfacing. Pairs with the existing `verify_equivalence` to
+  convert "rewrite refused" into actionable feedback.
+- `Counterexample` frozen dataclass exporting through the package.
+
+### Tests
+- 7 new cases in `tests/test_counterexample.py`. Full suite: 46 passing.
+
 ## [0.1.0] — 2026-04-25 — First stable release
 
 **Status.** Stable beta. Patent pending.
