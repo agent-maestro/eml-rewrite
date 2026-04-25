@@ -103,6 +103,41 @@ def test_include_conditional_flag_accepted_by_analyze_and_scan(
 # 5. --help on the parent parser succeeds without raising and lists
 # the three subcommands.
 
+def test_scan_as_patch_emits_unified_diff(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`scan --as-patch FILE` emits a unified diff applying every
+    improving rewrite, with no human-readable summary lines that
+    would prevent `git apply` from accepting stdout."""
+    src = tmp_path / "model.py"
+    src.write_text(
+        'from sympy import Symbol, exp, sinh, cosh, sin, cos\n'
+        'x = Symbol("x", positive=True)\n'
+        'exp(x) / (1 + exp(x))\n'
+        'sinh(x) / cosh(x)\n'
+        'sin(x)**2 + cos(x)**2\n',
+        encoding="utf-8",
+    )
+    rc = main(["scan", "--as-patch", str(src)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "--- a/" in out
+    assert "+++ b/" in out
+    assert "@@" in out
+    # Each of the three rewrites should appear as a removed line.
+    assert "-exp(x) / (1 + exp(x))" in out
+    assert "-sinh(x) / cosh(x)" in out
+    assert "-sin(x)**2 + cos(x)**2" in out
+    # And as added rewritten lines.
+    assert "+1/(1 + exp(-x))" in out
+    assert "+tanh(x)" in out
+    assert "+1" in out
+    # Patch mode must NOT emit the human-readable summary.
+    assert "improving rewrite(s)" not in out
+    assert "Run `eml-rewrite fix" not in out
+
+
 def test_root_help_lists_subcommands(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

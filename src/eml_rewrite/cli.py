@@ -9,11 +9,15 @@ Subcommands:
 Scan/fix walk Python source files looking for SymPy expression literals
 and inline arithmetic. Conservative: only rewrites that strictly reduce
 EML cost are proposed/applied.
+
+The ``scan --as-patch`` mode emits a unified diff that ``git apply``
+can consume directly.
 """
 from __future__ import annotations
 
 import argparse
 import ast
+import difflib
 import sys
 from pathlib import Path
 from typing import Any
@@ -76,6 +80,85 @@ def _find_expressions_in_source(source: str) -> list[tuple[int, str, sp.Basic]]:
 # ---------------------------------------------------------------------------
 
 
+def _make_patch(
+    filename: str,
+    source: str,
+    include_conditional: bool,
+) -> str:
+    """Render a unified diff of the file with all improving rewrites
+    applied. Output is suitable for ``git apply``. Returns an empty
+    string when no rewrites apply (so callers can short-circuit).
+
+    Uses the AST node's source span (``lineno``, ``col_offset``,
+    ``end_lineno``, ``end_col_offset``) for exact in-place
+    substitution, so whitespace differences between the source and
+    ``ast.unparse`` output don't cause silent skips.
+    """
+    original_lines = source.splitlines(keepends=True)
+    rewritten_lines = list(original_lines)
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return ""
+
+    # Collect (node, expr, suggestion) for every Expr we can analyze.
+    # We sort right-to-left so substitutions on the same line don't
+    # invalidate each other's column offsets.
+    edits: list[tuple[int, int, int, str]] = []  # (line0, col_start, col_end, replacement)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Expr):
+            continue
+        expr = _safe_eval_expr_node(node.value)
+        if expr is None or not isinstance(expr, sp.Basic) or expr.is_Atom:
+            continue
+        sugg = suggest(
+            expr,
+            only_improvements=True,
+            include_conditional=include_conditional,
+        )
+        if not sugg:
+            continue
+        top = min(sugg, key=lambda s: s.score_after)
+        # Use the AST node's exact span; fall back gracefully if
+        # spans are unavailable (very old Python or out-of-tree
+        # parsers).
+        v = node.value
+        # Narrow Optional[int] to int through local checks; mypy then
+        # accepts the int-tuple append below.
+        lineno = getattr(v, "lineno", None)
+        end_lineno = getattr(v, "end_lineno", None)
+        col_offset = getattr(v, "col_offset", None)
+        end_col_offset = getattr(v, "end_col_offset", None)
+        if (lineno is None or end_lineno is None
+                or col_offset is None or end_col_offset is None):
+            continue
+        if lineno != end_lineno:
+            # Multi-line expression — the simple line-edit model
+            # below doesn't handle this. Skip; v0.2 territory.
+            continue
+        edits.append((lineno - 1, col_offset, end_col_offset, str(top.rewritten)))
+
+    # Apply right-to-left within each line so left-most spans don't
+    # shift the right-most ones.
+    edits.sort(key=lambda e: (e[0], -e[1]))
+    for line0, col_start, col_end, replacement in edits:
+        if line0 < 0 or line0 >= len(rewritten_lines):
+            continue
+        line = rewritten_lines[line0]
+        rewritten_lines[line0] = line[:col_start] + replacement + line[col_end:]
+
+    if not edits:
+        return ""
+
+    diff_iter = difflib.unified_diff(
+        original_lines, rewritten_lines,
+        fromfile=f"a/{filename}", tofile=f"b/{filename}",
+        n=3,
+    )
+    return "".join(diff_iter)
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     found_any = False
     n_files = 0
@@ -90,6 +173,16 @@ def cmd_scan(args: argparse.Namespace) -> int:
             source = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
+
+        if args.as_patch:
+            patch = _make_patch(f, source, args.include_conditional)
+            if patch:
+                found_any = True
+                # Count hunks ('@@') as a proxy for suggestion count.
+                n_suggestions += sum(1 for line in patch.splitlines() if line.startswith("@@"))
+                print(patch, end="")
+            continue
+
         for line, snippet, expr in _find_expressions_in_source(source):
             sugg = suggest(
                 expr,
@@ -106,6 +199,11 @@ def cmd_scan(args: argparse.Namespace) -> int:
             if not top.domain_verified and top.domain_required:
                 tag = f"{top.pattern_name} | conditional: {top.domain_required}"
             print(f"  -> {top.rewritten}  ({tag}, -{top.reduction} cost units)")
+    if args.as_patch:
+        # In patch mode, the only stdout content is the unified diff
+        # itself so the output stays git-apply-clean. The exit code
+        # carries the "found anything" signal.
+        return 0 if found_any else 0
     if not found_any:
         print(f"No improving rewrites found across {n_files} file(s).")
     else:
@@ -192,6 +290,11 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Also report rewrites whose domain assumption "
                              "cannot be established by SymPy's assumption "
                              "system; the requirement is annotated.")
+    p_scan.add_argument("--as-patch", action="store_true",
+                        help="Emit a unified diff (suitable for `git apply`) "
+                             "instead of the human-readable report. The diff "
+                             "applies all improving rewrites in-place; "
+                             "stdout is git-apply-clean.")
     p_scan.set_defaults(func=cmd_scan)
 
     p_fix = sub.add_parser("fix", help="Print rewrites that would be applied")

@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project will adhere to [Semantic Versioning](https://semver.org/) once
 the public 1.0.0 release ships.
 
+## [0.2.1] — 2026-04-25 — CLI patch mode + IPython integration
+
+### Added
+- `eml-rewrite scan --as-patch FILE`: emits a unified diff
+  (suitable for `git apply`) instead of the human-readable report.
+  Uses AST source spans for exact in-place substitution, so
+  whitespace differences between source and `ast.unparse` output
+  don't cause silent skips. Stdout is git-apply-clean (no
+  summary lines).
+- `eml_rewrite.notebook` module with `%%eml_rewrite` cell magic.
+  Load via `%load_ext eml_rewrite.notebook`; tagged cells print
+  a rewrite report above their normal execution. IPython is not
+  a hard dependency — module imports cleanly without it; the
+  magic registers only when `load_ipython_extension` is called.
+
+### Tests
+- 1 new CLI test (`test_scan_as_patch_emits_unified_diff`) +
+  8 new notebook tests (`tests/test_notebook.py`). Full suite:
+  66 passing.
+
 ## [0.2.0] — 2026-04-25 — Cost-anneal interpolation path
 
 ### Added
