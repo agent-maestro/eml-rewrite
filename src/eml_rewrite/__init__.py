@@ -20,7 +20,15 @@ Command-line:
 """
 from __future__ import annotations
 
-from .core import Suggestion, best, suggest, score
+from .core import (
+    DomainRequirement,
+    NO_REQUIREMENT,
+    Suggestion,
+    best,
+    score,
+    suggest,
+    verify_equivalence,
+)
 
 __version__ = "0.1.0a0"
 
@@ -30,4 +38,7 @@ __all__ = [
     "suggest",
     "score",
     "Suggestion",
+    "DomainRequirement",
+    "NO_REQUIREMENT",
+    "verify_equivalence",
 ]

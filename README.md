@@ -38,7 +38,9 @@ x = sp.Symbol("x", real=True)
 sugg = suggest(sp.exp(x) / (1 + sp.exp(x)))
 # [Suggestion(pattern_name="sigmoid",
 #             rewritten=1/(1 + exp(-x)),
-#             score_before=3, score_after=2, reduction=1)]
+#             score_before=3, score_after=2, reduction=1,
+#             domain_required="", domain_verified=True,
+#             numerically_verified=True)]
 
 # Pick the lowest-score rewrite, or original if no improvement
 best(sp.sinh(x) / sp.cosh(x))
@@ -85,20 +87,92 @@ Suggested rewrites (1):
   [sigmoid] 1/(1 + exp(-x))  (-1 cost units)
 ```
 
-## Provable non-regression
+## Non-regression: three layers
 
-The library's contract:
+Every rewrite returned with `only_improvements=True` is required to
+clear three independent gates before being surfaced to the caller.
+
+### 1. Cost gate
 
 ```python
-for expr in any_collection:
-    for s in suggest(expr, only_improvements=True):
-        assert s.score_after < s.score_before  # always
+for s in suggest(expr, only_improvements=True):
+    assert s.score_after < s.score_before
 ```
 
-Every rewrite returned with `only_improvements=True` strictly reduces
-the EML predicted depth (per `eml-cost`'s `measure`). The test suite
-validates this on a curated panel; the engine filters non-improvements
-before returning them.
+Strict EML cost reduction (per `eml-cost`'s `measure`) — the
+historical headline guarantee. Suggestions whose post-rewrite cost is
+not strictly lower are filtered out before return.
+
+### 2. Domain gate
+
+A subset of the rewrites in the library are valid only on a restricted
+input domain. Examples:
+
+| Pattern | Identity | Valid when |
+|---|---|---|
+| `log(x^n) -> n*log(x)` | real-valued log identity | `x > 0` |
+| `log(a/b) -> log(a) - log(b)` | log split | `a > 0` and `b > 0` |
+| `exp(log(x)) -> x` | inverse pair | `x > 0` |
+| `log(exp(x)) -> x` | inverse pair (branch correctness) | `x` real |
+
+For these patterns, the engine probes SymPy's assumption system
+against the relevant subexpression (`expr.is_positive`,
+`expr.is_real`). A rewrite is accepted only when the assumption
+required for soundness is established by the assumption system. So:
+
+```python
+import sympy as sp
+from eml_rewrite import suggest
+
+# Unconstrained symbol — no positivity assumption available.
+u = sp.Symbol("u")
+suggest(sp.log(u**2))           # []  (log_pow rejected; would silently
+                                #      produce a complex value for u<0)
+
+# Same expression with a positive symbol — accepted.
+x = sp.Symbol("x", positive=True)
+suggest(sp.log(x**2), only_improvements=False)
+# [Suggestion(pattern_name='log_pow', rewritten=2*log(x),
+#             domain_required='x > 0', domain_verified=True, ...)]
+
+# Conditional mode: surface the rewrite WITH the requirement annotated
+# rather than dropping it silently. Useful for editor / notebook UI.
+suggest(sp.log(u**2), only_improvements=False, include_conditional=True)
+# [Suggestion(pattern_name='log_pow', rewritten=2*log(u),
+#             domain_required='u > 0', domain_verified=False, ...)]
+```
+
+### 3. Numerical-equivalence gate
+
+After the structural and domain gates pass, the engine evaluates both
+the original and the rewritten expression at sample points drawn from
+regions consistent with each free symbol's SymPy assumptions
+(positive, negative, near-zero, moderately large). Evaluation runs at
+30 decimal digits via SymPy's `evalf`, with a fast path that
+short-circuits when SymPy's `simplify` proves the identity directly
+— this avoids false positives on rewrites that *improve* numerical
+stability (e.g., `cosh(x)^2 - sinh(x)^2 -> 1` at large `x`, where
+float-precision evaluation of the original collapses to zero from
+catastrophic cancellation).
+
+A rewrite that disagrees on any probed point — including a one-sided
+domain error indicating the rewrite changes the domain of definition
+— is rejected. Set `numerical_verify=False` only for benchmarking
+the structural+domain layers in isolation.
+
+### Verifying equivalence directly
+
+```python
+from eml_rewrite import verify_equivalence
+import sympy as sp
+
+u = sp.Symbol("u")
+verify_equivalence(sp.log(u**2), 2 * sp.log(u))
+# False  (disagrees on u<0)
+
+verify_equivalence(sp.sin(u)**2 + sp.cos(u)**2, sp.S.One)
+# True   (universal identity)
+```
 
 ## Links
 
