@@ -1,21 +1,21 @@
 # eml-rewrite
 
-**Pre-release alpha. Patent pending.** Source-available; see LICENSE.
+**Stable beta. Patent pending.** Source-available; see LICENSE.
 
 F-family fusion pattern rewriter for symbolic expressions. Detects
 equivalent rewrites that strictly reduce predicted EML cost (per
 [`eml-cost`](https://github.com/almaguer1986/eml-cost)). The library's
-headline guarantee: every proposed rewrite either improves the cost
-or is filtered out.
+headline guarantee: every proposed rewrite clears three independent
+gates (cost, domain, numerical equivalence) before it's surfaced to
+the caller.
 
 ## Installation
 
 ```bash
-pip install --pre eml-rewrite
+pip install eml-rewrite
 ```
 
-The `--pre` flag is required while we're on `0.1.0a0`. `eml-cost` is
-installed as a dependency.
+`eml-cost` is installed as a dependency.
 
 For local development:
 
@@ -61,6 +61,67 @@ best(sp.exp(sp.exp(x)))
 7. `exp(log(x))`, `log(exp(x))` -> `x` — inverse pair
 8. `log(a/b)` -> `log(a) - log(b)` — when score improves
 9. `log(x^n)` -> `n*log(x)` — when score improves
+
+## Real-world examples
+
+### Scanning a SciPy-style script
+
+```python
+# stats.py
+from sympy import Symbol, exp, log
+x = Symbol("x", positive=True)
+log(x ** 4)                  # gets flagged: log_pow rewrite available
+exp(x) / (1 + exp(x))        # gets flagged: sigmoid canonicalization
+```
+
+```bash
+$ eml-rewrite scan stats.py
+stats.py:3  log(x**4)
+  -> 4*log(x)  (log_pow, -0 cost units)
+stats.py:4  exp(x)/(exp(x) + 1)
+  -> 1/(1 + exp(-x))  (sigmoid, -1 cost units)
+
+Found 2 improving rewrite(s) across 1 file(s).
+```
+
+### Fixing a PyTorch-flavored model definition
+
+```python
+# model.py — math written by hand for clarity, then auto-canonicalized
+from sympy import Symbol, exp, sinh, cosh
+x = Symbol("x", real=True, positive=True)
+sinh(x) / cosh(x)            # → tanh(x)
+exp(x) / (1 + exp(x))        # → 1/(1 + exp(-x))
+```
+
+```bash
+$ eml-rewrite fix model.py
+model.py:3  sinh(x)/cosh(x)
+  Would rewrite to: tanh(x)
+model.py:4  exp(x)/(exp(x) + 1)
+  Would rewrite to: 1/(1 + exp(-x))
+
+Would apply 2 rewrite(s) across 1 file(s).
+NOTE: v0.1 prints proposed rewrites only.
+```
+
+### Surfacing conditional rewrites for editor / notebook UX
+
+```bash
+$ eml-rewrite analyze "log(x**4)" --include-conditional
+Expression:           log(x**4)
+  pfaffian_r:           1
+  ...
+
+Suggested rewrites (1):
+  [log_pow | conditional: x > 0] 4*log(x)  (-0 cost units)
+```
+
+The `conditional:` annotation appears when the rewrite's domain
+requirement (here, `x > 0`) cannot be established by SymPy's
+assumption system. Without `--include-conditional`, the rewrite
+is silently rejected. With it, the requirement is annotated so the
+caller can prompt or confirm.
 
 ## Command line
 

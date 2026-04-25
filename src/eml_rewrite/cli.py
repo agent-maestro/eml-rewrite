@@ -37,9 +37,11 @@ def _safe_eval_expr_node(node: ast.AST) -> sp.Basic | None:
     confirming the AST contains nothing dangerous (Call, Attribute, BinOp,
     UnaryOp, Constant, Name).
     """
+    # ast.Num was deprecated in 3.8 and removed in 3.14; ast.Constant
+    # covers numeric literals on every supported Python version.
     safe_node_types = (
         ast.Expression, ast.Expr, ast.BinOp, ast.UnaryOp, ast.Constant,
-        ast.Name, ast.Call, ast.Attribute, ast.Num, ast.USub, ast.UAdd,
+        ast.Name, ast.Call, ast.Attribute, ast.USub, ast.UAdd,
         ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod, ast.FloorDiv,
         ast.Load, ast.Tuple, ast.Subscript, ast.Slice,
     )
@@ -89,15 +91,21 @@ def cmd_scan(args: argparse.Namespace) -> int:
         except UnicodeDecodeError:
             continue
         for line, snippet, expr in _find_expressions_in_source(source):
-            sugg = suggest(expr, only_improvements=True)
+            sugg = suggest(
+                expr,
+                only_improvements=True,
+                include_conditional=args.include_conditional,
+            )
             if not sugg:
                 continue
             top = min(sugg, key=lambda s: s.score_after)
             found_any = True
             n_suggestions += 1
             print(f"{f}:{line}  {snippet}")
-            print(f"  -> {top.rewritten}  ({top.pattern_name}, "
-                  f"-{top.reduction} cost units)")
+            tag = top.pattern_name
+            if not top.domain_verified and top.domain_required:
+                tag = f"{top.pattern_name} | conditional: {top.domain_required}"
+            print(f"  -> {top.rewritten}  ({tag}, -{top.reduction} cost units)")
     if not found_any:
         print(f"No improving rewrites found across {n_files} file(s).")
     else:
@@ -149,11 +157,18 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     print(f"  predicted_depth:      {result.predicted_depth}")
     print(f"  is_pfaffian_not_eml:  {result.is_pfaffian_not_eml}")
 
-    sugg = suggest(result.expression, only_improvements=True)
+    sugg = suggest(
+        result.expression,
+        only_improvements=True,
+        include_conditional=args.include_conditional,
+    )
     if sugg:
         print(f"\nSuggested rewrites ({len(sugg)}):")
         for s in sorted(sugg, key=lambda x: -x.reduction):
-            print(f"  [{s.pattern_name}] {s.rewritten}  (-{s.reduction} cost units)")
+            tag = s.pattern_name
+            if not s.domain_verified and s.domain_required:
+                tag = f"{s.pattern_name} | conditional: {s.domain_required}"
+            print(f"  [{tag}] {s.rewritten}  (-{s.reduction} cost units)")
     else:
         print("\nNo improving rewrite found.")
     return 0
@@ -173,6 +188,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_scan = sub.add_parser("scan", help="Scan files; report improving rewrites")
     p_scan.add_argument("files", nargs="+")
+    p_scan.add_argument("--include-conditional", action="store_true",
+                        help="Also report rewrites whose domain assumption "
+                             "cannot be established by SymPy's assumption "
+                             "system; the requirement is annotated.")
     p_scan.set_defaults(func=cmd_scan)
 
     p_fix = sub.add_parser("fix", help="Print rewrites that would be applied")
@@ -181,6 +200,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_analyze = sub.add_parser("analyze", help="Analyze a single expression")
     p_analyze.add_argument("expr")
+    p_analyze.add_argument("--include-conditional", action="store_true",
+                           help="Also report conditional rewrites (see scan --help).")
     p_analyze.set_defaults(func=cmd_analyze)
 
     return parser
