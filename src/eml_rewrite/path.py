@@ -66,7 +66,7 @@ def _are_equivalent(a: sp.Basic, b: sp.Basic) -> bool:
     if a == b:
         return True
     try:
-        return sp.simplify(a - b) == 0
+        return bool(sp.simplify(a - b) == 0)
     except (TypeError, ValueError, RecursionError):
         return False
 
