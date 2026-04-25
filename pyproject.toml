@@ -32,7 +32,11 @@ classifiers = [
 ]
 dependencies = [
     "sympy>=1.12",
-    "eml-cost>=0.1.0",
+    # Loose floor: 0.1.0a0 is on PyPI today; 0.1.0 is built locally
+    # but not yet uploaded. Tighten to >=0.1.0 once `twine upload`
+    # ships eml-cost 0.1.0. The runtime imports we use (measure,
+    # analyze) exist in both versions, so this loose pin is sound.
+    "eml-cost>=0.1.0a0",
 ]
 
 [project.scripts]
