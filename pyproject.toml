@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eml-rewrite"
+version = "0.1.0a0"
+description = "F-family fusion pattern rewriter for symbolic expressions and Python source."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "PROPRIETARY-PRE-RELEASE" }
+authors = [
+    { name = "Monogate Research" },
+]
+keywords = [
+    "symbolic-computation",
+    "rewrite",
+    "fusion",
+    "sympy",
+    "linter",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "sympy>=1.12",
+    "eml-cost>=0.1.0a0",
+]
+
+[project.scripts]
+eml-rewrite = "eml_rewrite.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "mypy>=1.5",
+    "ruff>=0.1",
+]
+
+[project.urls]
+Homepage = "https://monogate.org"
+Repository = "https://github.com/almaguer1986/eml-rewrite"
+Issues = "https://github.com/almaguer1986/eml-rewrite/issues"
+Changelog = "https://github.com/almaguer1986/eml-rewrite/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+eml_rewrite = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --strict-markers"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
