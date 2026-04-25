@@ -554,6 +554,13 @@ class Counterexample:
         other is finite — the rewrite changes the domain of definition).
     note:
         Human-readable one-line summary suitable for editor surfacing.
+    before_expr:
+        The *before* expression that was checked. Optional (defaults to
+        ``None`` for backwards compatibility); always populated when
+        produced by :func:`find_counterexample`. Required by
+        :func:`render_test` to emit a runnable regression test.
+    after_expr:
+        Same, for the *after* expression.
     """
 
     symbols: tuple[sp.Symbol, ...]
@@ -562,6 +569,8 @@ class Counterexample:
     after_value: complex | None
     kind: str
     note: str
+    before_expr: sp.Basic | None = None
+    after_expr: sp.Basic | None = None
 
 
 def find_counterexample(
@@ -611,6 +620,7 @@ def find_counterexample(
             before_value=cb, after_value=ca,
             kind="value_disagreement",
             note=f"constant disagreement: {cb} vs {ca}",
+            before_expr=before, after_expr=after,
         )
 
     region_lists = [_regions_for_symbol(s) for s in syms]
@@ -641,6 +651,7 @@ def find_counterexample(
                 kind="domain_mismatch",
                 note=f"original undefined at ({sym_str}); "
                      f"rewrite gives {v_after} — rewrite enlarges the domain",
+                before_expr=before, after_expr=after,
             )
         if err_after is ValueError and v_before is not None:
             sym_str = ", ".join(f"{s}={p!r}" for s, p in zip(syms, point))
@@ -650,6 +661,7 @@ def find_counterexample(
                 kind="domain_mismatch",
                 note=f"rewrite undefined at ({sym_str}); "
                      f"original gives {v_before} — rewrite shrinks the domain",
+                before_expr=before, after_expr=after,
             )
 
         if v_before is not None and v_after is not None:
@@ -661,6 +673,7 @@ def find_counterexample(
                     kind="value_disagreement",
                     note=f"at ({sym_str}): original={v_before}, "
                          f"rewrite={v_after}",
+                    before_expr=before, after_expr=after,
                 )
 
     return None

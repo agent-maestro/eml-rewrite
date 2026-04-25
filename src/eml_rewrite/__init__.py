@@ -32,9 +32,11 @@ from .core import (
     verify_equivalence,
 )
 from .expansions import EXPANSION_PATTERNS, expand, expand_fully
+from .fix import CostFixFailed, costlimit_or_fix
 from .path import Step, path
+from .synthesize import render_test
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "__version__",
@@ -48,8 +50,11 @@ __all__ = [
     "DomainRequirement",
     "NO_REQUIREMENT",
     "Counterexample",
+    "CostFixFailed",
     "Step",
     "verify_equivalence",
     "find_counterexample",
+    "costlimit_or_fix",
     "path",
+    "render_test",
 ]

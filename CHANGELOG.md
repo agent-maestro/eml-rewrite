@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project will adhere to [Semantic Versioning](https://semver.org/) once
 the public 1.0.0 release ships.
 
+## [0.4.0] — 2026-04-25 — `@costlimit_or_fix` + `render_test`
+
+### Added
+- **`@costlimit_or_fix(predicted_depth=N, max_path_r=N, pfaffian_r=N,
+  max_search_steps=8)`**: backward-cost guarantor decorator. Same
+  configuration surface as `eml_cost.costlimit`, but on over-budget
+  return values it walks the rewrite graph (best-first, cost-monotone)
+  looking for an equivalent under-budget form and silently substitutes
+  the first one it finds. If no fix exists within budget, raises
+  `CostFixFailed` (a `CostLimitExceeded` subclass) with the search
+  trail attached so callers see what was tried. Substitution is sound
+  by construction — the rewrite library's three-layer non-regression
+  gates every step.
+- **`CostFixFailed`** exception (exported). Adds `.search_trail:
+  list[Step]` to the parent `CostLimitExceeded` payload.
+- **`render_test(cx, name="...", precision=15) -> str`**: counterexample-
+  driven test synthesizer. Takes a `Counterexample` from
+  `find_counterexample` and emits a runnable pytest test source string
+  that pins the disagreement as a permanent regression case. The
+  rendered test uses `sp.S(srepr(...))` for round-trip-safe expression
+  serialization (preserves symbol assumptions) and binds the
+  substitution point by symbol name. Self-contained except for sympy.
+- **`Counterexample.before_expr` / `Counterexample.after_expr`**: two
+  new optional fields on the `Counterexample` dataclass (default `None`
+  for backwards compatibility). `find_counterexample` now populates
+  them so `render_test` can reference the original expressions without
+  duplicate plumbing.
+
+Use cases: cost contracts that auto-comply (no more brittle test
+failures from unexpected expression growth), and property-based
+testing that converts each found counterexample into a permanent
+CI gate without manual transcription.
+
+### Tests
+- 8 new cases in `tests/test_fix.py` (`@costlimit_or_fix` happy
+  path + failure path + trail capture + non-Basic passthrough +
+  decorator-time validation).
+- 9 new cases in `tests/test_synthesize.py` (`render_test` —
+  including meta-tests that exec the generated source and confirm
+  it asserts as expected).
+- Full suite: 99 passing.
+
 ## [0.3.0] — 2026-04-25 — Bidirectional rewrites (`expand` / `expand_fully`)
 
 ### Added
