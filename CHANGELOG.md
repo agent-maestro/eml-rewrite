@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project will adhere to [Semantic Versioning](https://semver.org/) once
 the public 1.0.0 release ships.
 
+## [0.3.0] — 2026-04-25 — Bidirectional rewrites (`expand` / `expand_fully`)
+
+### Added
+- `expand(expr) -> list[Suggestion]`: returns equivalent forms with
+  *higher* predicted cost — the opposite direction of `suggest()`.
+  Useful for pedagogy ("show me what tanh really is"), paper writing
+  (explicit form when canonical is too dense), test generation
+  (synthesize ugly equivalents), and reverse-engineering.
+- `expand_fully(expr, max_depth=6) -> Basic`: recursively applies
+  `expand` until no more expansions apply or the depth budget is
+  exhausted. For `tanh(x)` this walks
+  `tanh → sinh/cosh → ((exp diff)/(exp sum))` in one call.
+- `EXPANSION_PATTERNS` registry of the four reverse patterns:
+  `tanh → sinh/cosh`, `cosh → (exp(x)+exp(-x))/2`,
+  `sinh → (exp(x)-exp(-x))/2`, `1/(1+exp(-x)) → exp(x)/(1+exp(x))`.
+  Patterns whose forward direction destroys information
+  (Pythagorean identity, hyperbolic identity, exp/log inverse) are
+  explicitly NOT reversed because the input → output mapping is
+  not invertible.
+
+### Tests
+- 16 new cases in `tests/test_expansions.py`. Full suite: 82 passing.
+
 ## [0.2.1] — 2026-04-25 — CLI patch mode + IPython integration
 
 ### Added

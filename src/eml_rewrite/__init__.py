@@ -31,15 +31,19 @@ from .core import (
     suggest,
     verify_equivalence,
 )
+from .expansions import EXPANSION_PATTERNS, expand, expand_fully
 from .path import Step, path
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 __all__ = [
     "__version__",
     "best",
     "suggest",
     "score",
+    "expand",
+    "expand_fully",
+    "EXPANSION_PATTERNS",
     "Suggestion",
     "DomainRequirement",
     "NO_REQUIREMENT",
