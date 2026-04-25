@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project will adhere to [Semantic Versioning](https://semver.org/) once
 the public 1.0.0 release ships.
 
+## [0.2.0] — 2026-04-25 — Cost-anneal interpolation path
+
+### Added
+- `path(start, end) -> list[Step] | None`: best-first search through
+  rewrite-equivalent expressions with monotone-decrease cost gate.
+  Returns the rewrite *sequence* that walks from one equivalent
+  expression to another, step by step, with non-increasing cost
+  at every step. Returns `None` when no path exists within the
+  configured budget (default `max_steps=6`, `max_frontier=256`).
+- `Step` frozen dataclass: `(pattern_name, expression, cost)`.
+- Use cases: pedagogy ("why is the simplified form simpler?"),
+  differential rewriting (explain a diff), reproducible
+  simplification (save + replay a path).
+
+### Tests
+- 11 new cases in `tests/test_path.py`. Full suite: 57 passing.
+
 ## [0.1.1] — 2026-04-25 — Counterexample finder
 
 ### Added

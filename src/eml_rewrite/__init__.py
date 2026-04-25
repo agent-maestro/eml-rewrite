@@ -31,8 +31,9 @@ from .core import (
     suggest,
     verify_equivalence,
 )
+from .path import Step, path
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 __all__ = [
     "__version__",
@@ -43,6 +44,8 @@ __all__ = [
     "DomainRequirement",
     "NO_REQUIREMENT",
     "Counterexample",
+    "Step",
     "verify_equivalence",
     "find_counterexample",
+    "path",
 ]
