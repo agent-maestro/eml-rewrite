@@ -205,7 +205,7 @@ def rewrite(expr: sp.Basic, strategy: str = "optimal") -> RewriteResult:
                 rew_cost = score(s.rewritten)
                 if rew_cost < cur_cost and verify_equivalence(current, s.rewritten):
                     current = s.rewritten
-                    steps.append(f"suggestion '{s.rule}': cost {cur_cost} -> {rew_cost}")
+                    steps.append(f"suggestion '{s.pattern_name}': cost {cur_cost} -> {rew_cost}")
         except Exception as e:
             steps.append(f"suggest() error (skipped): {type(e).__name__}")
 
