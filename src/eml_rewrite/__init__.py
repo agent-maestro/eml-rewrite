@@ -34,9 +34,15 @@ from .core import (
 from .expansions import EXPANSION_PATTERNS, expand, expand_fully
 from .fix import CostFixFailed, costlimit_or_fix
 from .path import Step, path
+from .pipeline import (
+    CanonicalReport,
+    RewriteResult,
+    rewrite,
+    to_canonical,
+)
 from .synthesize import render_test
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
     "__version__",
@@ -57,4 +63,8 @@ __all__ = [
     "costlimit_or_fix",
     "path",
     "render_test",
+    "rewrite",
+    "to_canonical",
+    "CanonicalReport",
+    "RewriteResult",
 ]
