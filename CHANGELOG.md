@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project will adhere to [Semantic Versioning](https://semver.org/) once
 the public 1.0.0 release ships.
 
+## [0.5.1] — 2026-04-26 — bugfix: aggressive strategy AttributeError
+
+### Fixed
+- `pipeline.rewrite(strategy="aggressive")` crashed with
+  `AttributeError: 'Suggestion' object has no attribute 'rule'` whenever
+  a candidate suggestion both lowered cost AND verified-equivalent —
+  the success-path log line accessed the wrong field name. The actual
+  field on `Suggestion` is `pattern_name`. The 0.5.0 release shipped
+  with the bug because mypy strict mode caught it only after publish.
+  No public API change; only the log string is affected.
+
+## [0.5.0] — 2026-04-26 — `to_canonical()` + `rewrite(strategy=...)` pipeline
+
+### Added
+- **`pipeline.to_canonical(expr)`**: thin wrapper over
+  `eml_cost.canonicalize` returning a `CanonicalForm` (original,
+  canonical, cost_before, cost_after, savings_pct).
+- **`pipeline.rewrite(expr, strategy="canonical"|"optimal"|"aggressive")`**:
+  end-to-end orchestrator with verified-equivalence gates. Each step
+  must (1) lower or equal the cost and (2) verify equivalent before it
+  is accepted into the chain. Returns a `RewriteResult` with the rule
+  trail and a final `verified_equivalent` boolean.
+
 ## [0.4.0] — 2026-04-25 — `@costlimit_or_fix` + `render_test`
 
 ### Added
