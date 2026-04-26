@@ -32,11 +32,13 @@ classifiers = [
 ]
 dependencies = [
     "sympy>=1.12",
-    # Loose floor: 0.1.0a0 is on PyPI today; 0.1.0 is built locally
-    # but not yet uploaded. Tighten to >=0.1.0 once `twine upload`
-    # ships eml-cost 0.1.0. The runtime imports we use (measure,
-    # analyze) exist in both versions, so this loose pin is sound.
-    "eml-cost>=0.1.0a0",
+    # eml-cost 0.2.0 (published 2026-04-25) is the floor. The
+    # tests in this package import names introduced in 0.1.1+
+    # (CostLimitExceeded, fingerprint) and 0.2.0+
+    # (cache_by_fingerprint), so the prior `>=0.1.0a0` constraint
+    # was too loose — pip would resolve to the alpha and crash on
+    # import. Tightened in 0.4.1 hotfix.
+    "eml-cost>=0.2.0",
 ]
 
 [project.scripts]
