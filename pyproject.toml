@@ -53,9 +53,9 @@ dev = [
 
 [project.urls]
 Homepage = "https://monogate.org"
-Repository = "https://github.com/almaguer1986/eml-rewrite"
-Issues = "https://github.com/almaguer1986/eml-rewrite/issues"
-Changelog = "https://github.com/almaguer1986/eml-rewrite/blob/main/CHANGELOG.md"
+Repository = "https://github.com/agent-maestro/eml-rewrite"
+Issues = "https://github.com/agent-maestro/eml-rewrite/issues"
+Changelog = "https://github.com/agent-maestro/eml-rewrite/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]

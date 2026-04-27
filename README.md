@@ -4,7 +4,7 @@
 
 F-family fusion pattern rewriter for symbolic expressions. Detects
 equivalent rewrites that strictly reduce predicted EML cost (per
-[`eml-cost`](https://github.com/almaguer1986/eml-cost)). The library's
+[`eml-cost`](https://github.com/agent-maestro/eml-cost)). The library's
 headline guarantee: every proposed rewrite clears three independent
 gates (cost, domain, numerical equivalence) before it's surfaced to
 the caller.
@@ -20,7 +20,7 @@ pip install eml-rewrite
 For local development:
 
 ```bash
-git clone https://github.com/almaguer1986/eml-rewrite
+git clone https://github.com/agent-maestro/eml-rewrite
 cd eml-rewrite
 pip install -e ".[dev]"
 pytest
@@ -238,9 +238,9 @@ verify_equivalence(sp.sin(u)**2 + sp.cos(u)**2, sp.S.One)
 ## Links
 
 - Project home: [monogate.org](https://monogate.org)
-- Source: [github.com/almaguer1986/eml-rewrite](https://github.com/almaguer1986/eml-rewrite)
+- Source: [github.com/agent-maestro/eml-rewrite](https://github.com/agent-maestro/eml-rewrite)
 - Package: [pypi.org/project/eml-rewrite](https://pypi.org/project/eml-rewrite/)
-- Companion: [eml-cost](https://github.com/almaguer1986/eml-cost) (required dependency)
+- Companion: [eml-cost](https://github.com/agent-maestro/eml-cost) (required dependency)
 
 ## License
 
