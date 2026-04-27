@@ -36,3 +36,6 @@ env/
 .idea/
 *.swp
 .DS_Store
+
+# Graphify analysis output (config in .graphifyignore is committed)
+graphify-out/
