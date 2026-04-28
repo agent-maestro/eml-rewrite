@@ -28,6 +28,8 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://monogate.org"
+Repository = "https://github.com/agent-maestro/eml-rewrite"
+Issues = "https://github.com/agent-maestro/eml-rewrite/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
