@@ -1,70 +1,42 @@
-"""eml-rewrite — F-family fusion pattern rewriter.
+"""eml-rewrite — DEPRECATED.
 
-Detects equivalent rewrites of symbolic expressions that strictly reduce
-predicted EML cost (per ``eml-cost``). Provable non-regression: every
-proposed rewrite either improves the cost or is filtered out.
+This package has been consolidated into ``eml-cost`` as the
+:mod:`eml_cost.rewrite` subpackage. The standalone distribution
+will receive no further updates.
 
-Public API:
+Migration:
 
-    >>> from eml_rewrite import suggest, best
-    >>> import sympy as sp
-    >>> x = sp.Symbol("x", real=True)
-    >>> best(sp.exp(x) / (1 + sp.exp(x)))
-    1/(1 + exp(-x))
-    >>> # sigmoid pattern recognized; cost reduced from 3 to 2.
+    pip uninstall eml-rewrite
+    pip install "eml-cost[rewrite]>=0.15.0"
 
-Command-line:
+    # then change your imports:
+    # OLD:  from eml_rewrite import X
+    # NEW:  from eml_cost.rewrite import X
 
-    $ eml-rewrite scan mycode.py
-    $ eml-rewrite fix mycode.py
+This shim re-exports the public API from ``eml_cost.rewrite`` so
+existing code keeps working while you migrate.
 """
 from __future__ import annotations
 
-from .core import (
-    Counterexample,
-    DomainRequirement,
-    NO_REQUIREMENT,
-    Suggestion,
-    best,
-    find_counterexample,
-    score,
-    suggest,
-    verify_equivalence,
-)
-from .expansions import EXPANSION_PATTERNS, expand, expand_fully
-from .fix import CostFixFailed, costlimit_or_fix
-from .path import Step, path
-from .pipeline import (
-    CanonicalReport,
-    RewriteResult,
-    rewrite,
-    to_canonical,
-)
-from .synthesize import render_test
+import warnings as _warnings
 
-__version__ = "0.5.0"
+_warnings.warn(
+    "eml-rewrite is deprecated. Use `pip install \"eml-cost[rewrite]\"` "
+    "instead. The functionality is now available at eml_cost.rewrite. "
+    "This package will receive no further updates.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-__all__ = [
-    "__version__",
-    "best",
-    "suggest",
-    "score",
-    "expand",
-    "expand_fully",
-    "EXPANSION_PATTERNS",
-    "Suggestion",
-    "DomainRequirement",
-    "NO_REQUIREMENT",
-    "Counterexample",
-    "CostFixFailed",
-    "Step",
-    "verify_equivalence",
-    "find_counterexample",
-    "costlimit_or_fix",
-    "path",
-    "render_test",
-    "rewrite",
-    "to_canonical",
-    "CanonicalReport",
-    "RewriteResult",
-]
+from eml_cost import rewrite as _impl  # noqa: E402
+
+# Mirror the upstream public API so `from eml_rewrite import X` keeps
+# working. We deliberately avoid `from eml_cost.rewrite import *`
+# to keep `__all__` faithful to whatever the new home declares.
+__all__ = list(getattr(_impl, "__all__", []))
+for _name in __all__:
+    globals()[_name] = getattr(_impl, _name)
+del _name, _impl
+
+# Override any upstream __version__ — this shim has its own version line.
+__version__ = "0.6.0"

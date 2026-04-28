@@ -1,73 +1,33 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "eml-rewrite"
-version = "0.5.1"
-description = "F-family fusion pattern rewriter for symbolic expressions and Python source."
+version = "0.6.0"
+description = "DEPRECATED — consolidated into eml-cost[rewrite]. See README."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "PROPRIETARY-PRE-RELEASE" }
 authors = [
     { name = "Monogate Research" },
 ]
-keywords = [
-    "symbolic-computation",
-    "rewrite",
-    "fusion",
-    "sympy",
-    "linter",
-]
+keywords = ["eml", "deprecated"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 7 - Inactive",
     "Intended Audience :: Science/Research",
-    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Mathematics",
-    "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
-    "sympy>=1.12",
-    # eml-cost 0.2.0 (published 2026-04-25) is the floor. The
-    # tests in this package import names introduced in 0.1.1+
-    # (CostLimitExceeded, fingerprint) and 0.2.0+
-    # (cache_by_fingerprint), so the prior `>=0.1.0a0` constraint
-    # was too loose — pip would resolve to the alpha and crash on
-    # import. Tightened in 0.4.1 hotfix.
-    "eml-cost>=0.2.0",
-]
-
-[project.scripts]
-eml-rewrite = "eml_rewrite.cli:main"
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "mypy>=1.5",
-    "ruff>=0.1",
+    "eml-cost[rewrite]>=0.15.0",
 ]
 
 [project.urls]
 Homepage = "https://monogate.org"
-Repository = "https://github.com/agent-maestro/eml-rewrite"
-Issues = "https://github.com/agent-maestro/eml-rewrite/issues"
-Changelog = "https://github.com/agent-maestro/eml-rewrite/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-eml_rewrite = ["py.typed"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-v --strict-markers"
-
-[tool.mypy]
-python_version = "3.10"
-strict = true
-ignore_missing_imports = true
